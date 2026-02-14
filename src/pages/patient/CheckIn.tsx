@@ -2,7 +2,7 @@ import { useEffect, useState, useRef } from "react";
 import { useAuth } from "../../context/AuthContext";
 import { supabase } from "../../services/supabase";
 import { toast, ToastContainer } from "react-toastify";
-import { FaCheckCircle, FaCamera, FaTimes, FaImage, FaCalendarCheck } from "react-icons/fa";
+import { FaCheckCircle, FaCamera, FaTimes, FaImage } from "react-icons/fa";
 
 export default function CheckIn() {
     const { user } = useAuth();

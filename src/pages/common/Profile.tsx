@@ -2,7 +2,7 @@ import { useState, useEffect } from "react";
 import { useAuth } from "../../context/AuthContext";
 import { supabase } from "../../services/supabase";
 import { toast, ToastContainer } from "react-toastify";
-import { FaUserCircle, FaEnvelope, FaNotesMedical, FaUserMd, FaPhone, FaCalendarAlt, FaAddressCard } from "react-icons/fa";
+import { FaUserCircle, FaPhone, FaCalendarAlt, FaAddressCard } from "react-icons/fa";
 
 export default function Profile() {
     const { user, role } = useAuth();
@@ -28,7 +28,7 @@ export default function Profile() {
 
     const fetchProfile = async () => {
         try {
-            const { data, error } = await supabase
+            const { data } = await supabase
                 .from('profiles')
                 .select('*')
                 .eq('id', user!.id)

@@ -3,7 +3,7 @@ import { useAuth } from "../../context/AuthContext";
 import { fetchDashboardStats, fetchVitalsHistory, fetchMedicationAdherence } from "../../services/statsService";
 import StatCard from "../../components/common/StatCard";
 import { FaPills, FaHeartbeat, FaCalendarCheck, FaChartLine } from "react-icons/fa";
-import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, AreaChart, Area } from 'recharts';
+import {  XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, AreaChart, Area } from 'recharts';
 import FullCalendar from '@fullcalendar/react';
 import dayGridPlugin from '@fullcalendar/daygrid';
 import interactionPlugin from '@fullcalendar/interaction';
@@ -12,7 +12,7 @@ export default function PatientDashboard() {
     const { user } = useAuth();
     const [stats, setStats] = useState<any>(null);
     const [vitalsData, setVitalsData] = useState<any[]>([]);
-    const [adherenceData, setAdherenceData] = useState<any[]>([]);
+    // const [adherenceData, setAdherenceData] = useState<any[]>([]);
     const [loading, setLoading] = useState(true);
 
     useEffect(() => {
@@ -22,14 +22,14 @@ export default function PatientDashboard() {
     const loadDashboardData = async () => {
         setLoading(true);
         try {
-            const [s, v, a] = await Promise.all([
+            const [s, v] = await Promise.all([
                 fetchDashboardStats(user!.id, 'patient'),
                 fetchVitalsHistory(user!.id),
                 fetchMedicationAdherence(user!.id)
             ]);
             setStats(s);
             setVitalsData(v);
-            setAdherenceData(a);
+            // setAdherenceData(a);
         } catch (error) {
             console.error("Dashboard load error", error);
         } finally {
