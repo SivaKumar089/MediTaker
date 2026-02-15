@@ -103,21 +103,22 @@ export const fetchVitalsHistory = async (patientId: string, days = 7) => {
     const startDate = subDays(new Date(), days).toISOString();
 
     const { data, error } = await supabase
-        .from('medication_logs')
+        .from('health_records')
         .select('*')
         .eq('patient_id', patientId)
-        .gte('created_at', startDate)
-        .order('created_at', { ascending: true });
+        .gte('recorded_at', startDate)
+        .order('recorded_at', { ascending: true });
 
     if (error) throw error;
 
-    return data?.map(log => ({
-        date: format(new Date(log.created_at), 'MMM dd'),
-        heartRate: log.heart_rate,
-        bloodPressure: log.blood_pressure,
-        notes: log.notes,
-        taken: log.taken,
-        takenAt: log.taken_at
+    return data?.map(record => ({
+        date: format(new Date(record.recorded_at), 'MMM dd'),
+        fullDate: record.recorded_at,
+        heartRate: record.heart_rate,
+        bloodPressure: record.blood_pressure,
+        sugarLevel: record.sugar_level,
+        temperature: record.temperature,
+        notes: record.notes
     })) || [];
 };
 

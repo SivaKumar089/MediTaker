@@ -8,7 +8,7 @@ interface LayoutProps {
 }
 
 export default function Layout({ children, role }: LayoutProps) {
-    const [sidebarOpen, setSidebarOpen] = useState(false);
+    const [sidebarOpen, setSidebarOpen] = useState(true);
 
     const toggleSidebar = () => {
         setSidebarOpen(!sidebarOpen);
@@ -25,7 +25,7 @@ export default function Layout({ children, role }: LayoutProps) {
             />
 
             {/* Main Content */}
-            <div className="flex-1 flex flex-col min-w-0">
+            <div className="flex-1 flex flex-col min-w-0 lg:pl-64">
 
                 {/* Navbar */}
                 <Navbar role={role} toggleSidebar={toggleSidebar} />

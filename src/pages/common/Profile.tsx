@@ -57,12 +57,17 @@ export default function Profile() {
         e.preventDefault();
         setSaving(true);
         try {
+            // Fix: convert empty strings to null for integer fields
+            const cleanData = {
+                ...formData,
+                age: formData.age === "" ? null : parseInt(formData.age),
+                experience: formData.experience === "" ? null : parseInt(formData.experience),
+                updated_at: new Date().toISOString()
+            };
+
             const { error } = await supabase
                 .from('profiles')
-                .update({
-                    ...formData,
-                    updated_at: new Date().toISOString()
-                })
+                .update(cleanData)
                 .eq('id', user!.id);
 
             if (error) throw error;

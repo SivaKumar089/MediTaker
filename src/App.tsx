@@ -54,6 +54,7 @@ function App() {
                     <Route path="patients/:id" element={<PatientDetails />} />
                     <Route path="find-patients" element={<FindPatients />} />
                     <Route path="messages" element={<Messages />} />
+                    <Route path="messages/:contactId" element={<Messages />} />
                     <Route path="profile" element={<Profile />} />
                     <Route path="*" element={<Navigate to="dashboard" replace />} />
                   </Routes>
@@ -77,6 +78,7 @@ function App() {
                     <Route path="health" element={<HealthRecords />} />
                     <Route path="calendar" element={<CalendarPage />} />
                     <Route path="messages" element={<Messages />} />
+                    <Route path="messages/:contactId" element={<Messages />} />
                     <Route path="profile" element={<Profile />} />
                     <Route path="*" element={<Navigate to="dashboard" replace />} />
                   </Routes>

@@ -68,15 +68,19 @@ export default function CheckIn() {
             if (photo) {
                 const fileExt = photo.name.split('.').pop();
                 const fileName = `${user!.id}/${Date.now()}.${fileExt}`;
+
+                // Use the bucket name the user recently switched to: 'medicare'
                 const { error: uploadError } = await supabase.storage
-                    .from('medication-proofs')
+                    .from('medicare')
                     .upload(fileName, photo);
 
-                if (uploadError) throw uploadError;
+                if (uploadError) {
+                    console.error("Upload error:", uploadError);
+                    throw new Error(`Photo upload failed: ${uploadError.message}`);
+                }
 
-                // Get public URL
                 const { data: urlData } = supabase.storage
-                    .from('medication-proofs')
+                    .from('medicare')
                     .getPublicUrl(fileName);
 
                 photoUrl = urlData.publicUrl;
@@ -92,20 +96,25 @@ export default function CheckIn() {
                     time_slot: timeSlot,
                     taken: true,
                     taken_at: new Date().toISOString(),
-                    notes: notes || null,
+                    notes: notes?.trim() || null,
                     proof_photo_url: photoUrl
                 }]);
 
-            if (error) throw error;
+            if (error) {
+                if (error.code === '42501') {
+                    throw new Error("Permission denied (RLS). Please contact your administrator to enable log submission.");
+                }
+                throw error;
+            }
 
-            toast.success("Health check-in logged successfully!");
+            toast.success("Daily check-in completed! Great job.");
             setSelectedMed("");
             setTimeSlot("");
             setNotes("");
             removePhoto();
         } catch (error: any) {
             toast.error(error.message || "Failed to log check-in");
-            console.error(error);
+            console.error("Check-in error details:", error);
         } finally {
             setSubmitting(false);
         }

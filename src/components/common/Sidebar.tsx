@@ -59,7 +59,7 @@ export default function Sidebar({ role, isOpen, toggleSidebar }: SidebarProps) {
                 className={`fixed inset-y-0 left-0 w-64 ${theme} text-slate-300 
                 transition-transform duration-300 ease-in-out z-[70]
                 ${isOpen ? "translate-x-0 shadow-2xl" : "-translate-x-full"} 
-                lg:translate-x-0 lg:static`}
+                lg:translate-x-0 lg:fixed`}
             >
                 {/* Logo */}
                 <div className="p-8 border-b border-white/5 flex items-center justify-between">
@@ -92,8 +92,8 @@ export default function Sidebar({ role, isOpen, toggleSidebar }: SidebarProps) {
                                 to={link.path}
                                 onClick={() => window.innerWidth < 1024 && toggleSidebar()}
                                 className={`flex items-center px-4 py-3.5 rounded-2xl transition-all duration-300 group ${isActive
-                                        ? `${accent} text-white shadow-xl ${shadowColor}`
-                                        : `text-slate-400 ${hoverItem} hover:text-white`
+                                    ? `${accent} text-white shadow-xl ${shadowColor}`
+                                    : `text-slate-400 ${hoverItem} hover:text-white`
                                     }`}
                             >
                                 <span className={`text-lg mr-4 transition-transform group-hover:scale-110 ${isActive ? "text-white" : "text-slate-500 group-hover:text-white"}`}>
