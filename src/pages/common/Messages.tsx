@@ -1,4 +1,4 @@
-import { useEffect, useState, useRef, useMemo, useCallback } from "react";
+import { useEffect, useState, useRef, useCallback } from "react";
 import { useAuth } from "../../context/AuthContext";
 import { supabase } from "../../services/supabase";
 import { toast, ToastContainer } from "react-toastify";
@@ -34,11 +34,7 @@ export default function Messages() {
 
     const userRole = location.pathname.includes('/caretaker/') ? 'caretaker' : 'patient';
 
-    // Shared channel room ID
-    const channelId = useMemo(() => {
-        if (!user || !selectedContact) return null;
-        return [user.id, selectedContact.profile.id].sort().join(':');
-    }, [user, selectedContact]);
+
 
     const loadContacts = useCallback(async () => {
         if (!user?.id) return;
@@ -113,7 +109,7 @@ export default function Messages() {
             const found = contacts.find(c => c.profile.id === contactId);
             if (found) {
                 // IMPORTANT: Only update if the object is actually different to avoid loops
-                setSelectedContact(prev => prev?.profile?.id === found.profile.id ? prev : found);
+                setSelectedContact((prev: any) => prev?.profile?.id === found.profile.id ? prev : found);
             }
         } else if (!contactId) {
             setSelectedContact(null);
