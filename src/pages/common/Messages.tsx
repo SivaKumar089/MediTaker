@@ -1,4 +1,4 @@
-import { useEffect, useState, useRef, useMemo } from "react";
+import { useEffect, useState, useRef, useMemo, useCallback } from "react";
 import { useAuth } from "../../context/AuthContext";
 import { supabase } from "../../services/supabase";
 import { toast, ToastContainer } from "react-toastify";
@@ -25,6 +25,10 @@ export default function Messages() {
     const [searchTerm, setSearchTerm] = useState("");
     const [imagePreview, setImagePreview] = useState<string | null>(null);
     const [selectedImage, setSelectedImage] = useState<File | null>(null);
+    const [onlineUsers, setOnlineUsers] = useState<any>({});
+    const [isOtherTyping, setIsOtherTyping] = useState(false);
+    const [activeChannel, setActiveChannel] = useState<any>(null);
+    const typingTimeoutRef = useRef<any>(null);
     const messagesEndRef = useRef<HTMLDivElement>(null);
     const fileInputRef = useRef<HTMLInputElement>(null);
 
@@ -36,83 +40,16 @@ export default function Messages() {
         return [user.id, selectedContact.profile.id].sort().join(':');
     }, [user, selectedContact]);
 
-    useEffect(() => {
-        if (user) {
-            loadContacts();
-        }
-    }, [user]);
-
-    // Handle initial selection based on URL param
-    useEffect(() => {
-        if (contacts.length > 0 && contactId) {
-            const found = contacts.find(c => c.profile.id === contactId);
-            if (found) setSelectedContact(found);
-        }
-    }, [contactId, contacts]);
-
-    useEffect(() => {
-        if (selectedContact) {
-            fetchMessages();
-            markAllAsRead();
-
-            const subscription = supabase
-                .channel(`room:${channelId}`)
-                .on('postgres_changes', {
-                    event: 'INSERT',
-                    schema: 'public',
-                    table: 'messages',
-                    filter: `receiver_id=eq.${user!.id}`
-                }, (payload) => {
-                    if (payload.new.sender_id === selectedContact.profile.id) {
-                        setMessages(prev => [...prev.filter(m => m.id !== payload.new.id), payload.new]);
-                        markAllAsRead();
-                    }
-                    updateSidebarLastMessage(payload.new);
-                })
-                .on('postgres_changes', {
-                    event: 'INSERT',
-                    schema: 'public',
-                    table: 'messages',
-                    filter: `sender_id=eq.${user!.id}`
-                }, (payload) => {
-                    if (payload.new.receiver_id === selectedContact.profile.id) {
-                        setMessages(prev => [...prev.filter(m => m.id !== payload.new.id), payload.new]);
-                    }
-                    updateSidebarLastMessage(payload.new);
-                })
-                .on('postgres_changes', {
-                    event: 'UPDATE',
-                    schema: 'public',
-                    table: 'messages',
-                    filter: `sender_id=eq.${user!.id}`
-                }, (payload) => {
-                    setMessages(prev => prev.map(m => m.id === payload.new.id ? payload.new : m));
-                })
-                .subscribe();
-
-            return () => {
-                subscription.unsubscribe();
-            };
-        }
-    }, [selectedContact, channelId]);
-
-    useEffect(() => {
-        scrollToBottom();
-    }, [messages]);
-
-    const scrollToBottom = () => {
-        messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
-    };
-
-    const loadContacts = async () => {
+    const loadContacts = useCallback(async () => {
+        if (!user?.id) return;
         setLoading(true);
         try {
-            const data = await fetchConnections(user!.id, userRole);
+            const data = await fetchConnections(user.id, userRole);
             const contactsWithInfo = await Promise.all((data || []).map(async (c: any) => {
                 const { data: lastMsg } = await supabase
                     .from('messages')
                     .select('content, created_at, sender_id, image_url, is_read')
-                    .or(`and(sender_id.eq.${user!.id},receiver_id.eq.${c.profile.id}),and(sender_id.eq.${c.profile.id},receiver_id.eq.${user!.id})`)
+                    .or(`and(sender_id.eq.${user.id},receiver_id.eq.${c.profile.id}),and(sender_id.eq.${c.profile.id},receiver_id.eq.${user.id})`)
                     .order('created_at', { ascending: false })
                     .limit(1)
                     .maybeSingle();
@@ -121,7 +58,7 @@ export default function Messages() {
                     .from('messages')
                     .select('*', { count: 'exact', head: true })
                     .eq('sender_id', c.profile.id)
-                    .eq('receiver_id', user!.id)
+                    .eq('receiver_id', user.id)
                     .eq('is_read', false);
 
                 return { ...c, lastMessage: lastMsg, unreadCount: count || 0 };
@@ -137,28 +74,159 @@ export default function Messages() {
         } finally {
             setLoading(false);
         }
+    }, [user?.id, userRole]);
+
+    useEffect(() => {
+        if (user?.id) {
+            loadContacts();
+
+            // Global online status channel
+            const onlineChannel = supabase.channel('online-status');
+            onlineChannel
+                .on('presence', { event: 'sync' }, () => {
+                    setOnlineUsers(onlineChannel.presenceState());
+                })
+                .subscribe(async (status) => {
+                    if (status === 'SUBSCRIBED' && user?.id) {
+                        await onlineChannel.track({
+                            userId: user.id,
+                            online_at: new Date().toISOString(),
+                        });
+                    }
+                });
+
+            return () => {
+                onlineChannel.unsubscribe();
+            };
+        }
+    }, [user?.id, loadContacts]);
+
+    const isUserOnline = (userId: string) => {
+        return Object.values(onlineUsers).some((presences: any) =>
+            presences.some((p: any) => p.userId === userId)
+        );
     };
 
+    // 1. Derive selectedContact from contacts list whenever contactId changes
+    useEffect(() => {
+        if (contacts.length > 0 && contactId) {
+            const found = contacts.find(c => c.profile.id === contactId);
+            if (found) {
+                // IMPORTANT: Only update if the object is actually different to avoid loops
+                setSelectedContact(prev => prev?.profile?.id === found.profile.id ? prev : found);
+            }
+        } else if (!contactId) {
+            setSelectedContact(null);
+        }
+    }, [contactId, contacts]);
+
+    // 2. Main Chat Effect - Depends on contactId (string), not the whole object
+    useEffect(() => {
+        if (!contactId || !user) return;
+
+        fetchMessages();
+        markAllAsRead();
+
+        const channelId = [user.id, contactId].sort().join(':');
+        const roomChannel = supabase.channel(`room:${channelId}`);
+        setActiveChannel(roomChannel);
+
+        roomChannel
+            .on('postgres_changes', {
+                event: 'INSERT',
+                schema: 'public',
+                table: 'messages',
+                filter: `receiver_id=eq.${user.id}`
+            }, (payload) => {
+                if (payload.new.sender_id === contactId) {
+                    setMessages(prev => [...prev.filter(m => m.id !== payload.new.id), payload.new]);
+                    markAllAsRead();
+                }
+                updateSidebarLastMessage(payload.new);
+            })
+            .on('postgres_changes', {
+                event: 'INSERT',
+                schema: 'public',
+                table: 'messages',
+                filter: `sender_id=eq.${user.id}`
+            }, (payload) => {
+                if (payload.new.receiver_id === contactId) {
+                    setMessages(prev => [...prev.filter(m => m.id !== payload.new.id), payload.new]);
+                }
+                updateSidebarLastMessage(payload.new);
+            })
+            .on('postgres_changes', {
+                event: 'UPDATE',
+                schema: 'public',
+                table: 'messages',
+                filter: `sender_id=eq.${user.id}`
+            }, (payload) => {
+                setMessages(prev => prev.map(m => m.id === payload.new.id ? payload.new : m));
+            })
+            .on('postgres_changes', {
+                event: 'UPDATE',
+                schema: 'public',
+                table: 'messages',
+                filter: `receiver_id=eq.${user.id}`
+            }, (payload) => {
+                if (payload.new.sender_id === contactId) {
+                    setMessages(prev => prev.map(m => m.id === payload.new.id ? payload.new : m));
+                }
+            })
+            .on('broadcast', { event: 'typing' }, ({ payload }) => {
+                if (payload.userId === contactId) {
+                    setIsOtherTyping(payload.isTyping);
+                }
+            })
+            .subscribe();
+
+        return () => {
+            roomChannel.unsubscribe();
+            setActiveChannel(null);
+            setIsOtherTyping(false);
+        };
+    }, [contactId, user]); // Only re-run when the ID or User changes
+
+    const handleTypingBroadcast = (isTyping: boolean) => {
+        if (activeChannel && user) {
+            activeChannel.send({
+                type: 'broadcast',
+                event: 'typing',
+                payload: { userId: user.id, isTyping }
+            });
+        }
+    };
+
+    useEffect(() => {
+        scrollToBottom();
+    }, [messages]);
+
+    const scrollToBottom = () => {
+        messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
+    };
+
+
     const fetchMessages = async () => {
+        if (!contactId || !user) return;
         const { data } = await supabase
             .from('messages')
             .select('*')
-            .or(`and(sender_id.eq.${user!.id},receiver_id.eq.${selectedContact.profile.id}),and(sender_id.eq.${selectedContact.profile.id},receiver_id.eq.${user!.id})`)
+            .or(`and(sender_id.eq.${user.id},receiver_id.eq.${contactId}),and(sender_id.eq.${contactId},receiver_id.eq.${user.id})`)
             .order('created_at', { ascending: true });
         setMessages(data || []);
     };
 
     const markAllAsRead = async () => {
-        if (!selectedContact) return;
+        if (!contactId || !user) return;
         await supabase
             .from('messages')
             .update({ is_read: true })
-            .eq('sender_id', selectedContact.profile.id)
-            .eq('receiver_id', user!.id)
+            .eq('sender_id', contactId)
+            .eq('receiver_id', user.id)
             .eq('is_read', false);
 
         setContacts(prev => prev.map(c =>
-            c.profile.id === selectedContact.profile.id ? { ...c, unreadCount: 0 } : c
+            c.profile.id === contactId ? { ...c, unreadCount: 0 } : c
         ));
     };
 
@@ -167,7 +235,7 @@ export default function Messages() {
         setContacts(prev => {
             const newContacts = prev.map(c => {
                 if (c.profile.id === otherId) {
-                    const isNewUnread = msg.sender_id !== user!.id && (!selectedContact || selectedContact.profile.id !== otherId);
+                    const isNewUnread = msg.sender_id !== user!.id && (contactId !== otherId);
                     return {
                         ...c,
                         lastMessage: msg,
@@ -284,7 +352,7 @@ export default function Messages() {
                                     <div className={`h-16 w-16 rounded-[1.8rem] flex items-center justify-center text-2xl font-black border-2 border-white ${selectedContact?.id === contact.id ? 'bg-white/20' : 'bg-slate-100 text-slate-400'}`}>
                                         {contact.profile?.full_name?.charAt(0)}
                                     </div>
-                                    <div className={`absolute -bottom-1 -right-1 h-4 w-4 rounded-full border-2 ${selectedContact?.id === contact.id ? 'border-emerald-600' : 'border-white'} ${contact.profile?.availability_status === 'available' ? 'bg-green-500' : 'bg-gray-300'}`} />
+                                    <div className={`absolute -bottom-1 -right-1 h-4 w-4 rounded-full border-2 ${selectedContact?.id === contact.id ? 'border-emerald-600' : 'border-white'} ${isUserOnline(contact.profile?.id) ? 'bg-green-500 shadow-[0_0_8px_rgba(34,197,94,0.6)]' : 'bg-gray-300'}`} />
                                 </div>
                                 <div className="ml-5 flex-1 text-left overflow-hidden">
                                     <div className="flex justify-between items-center mb-1">
@@ -327,10 +395,17 @@ export default function Messages() {
                                 </div>
                                 <div className="ml-5">
                                     <p className="font-black text-slate-800 text-lg tracking-tight leading-none mb-1">{selectedContact.profile?.full_name}</p>
-                                    <p className="text-[10px] font-black text-emerald-500 uppercase tracking-widest flex items-center gap-1.5">
-                                        <span className={`h-1.5 w-1.5 rounded-full ${selectedContact.profile?.availability_status === 'available' ? 'bg-green-500 animate-pulse' : 'bg-gray-300'}`}></span>
-                                        {selectedContact.profile?.availability_status || 'Offline'}
-                                    </p>
+                                    <div className="flex items-center gap-2">
+                                        <p className="text-[10px] font-black text-emerald-500 uppercase tracking-widest flex items-center gap-1.5">
+                                            <span className={`h-1.5 w-1.5 rounded-full ${isUserOnline(selectedContact.profile?.id) ? 'bg-green-500 animate-pulse' : 'bg-gray-300'}`}></span>
+                                            {isUserOnline(selectedContact.profile?.id) ? 'Online' : 'Offline'}
+                                        </p>
+                                        {isOtherTyping && (
+                                            <span className="text-[10px] font-bold text-gray-400 italic animate-pulse">
+                                                • Typing...
+                                            </span>
+                                        )}
+                                    </div>
                                 </div>
                             </div>
                             <div className="flex gap-2">
@@ -394,8 +469,20 @@ export default function Messages() {
                                         setNewMessage(e.target.value);
                                         e.target.style.height = 'auto';
                                         e.target.style.height = e.target.scrollHeight + 'px';
+
+                                        handleTypingBroadcast(true);
+                                        if (typingTimeoutRef.current) clearTimeout(typingTimeoutRef.current);
+                                        typingTimeoutRef.current = setTimeout(() => {
+                                            handleTypingBroadcast(false);
+                                        }, 2000);
                                     }}
-                                    onKeyDown={(e) => { if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); handleSendMessage(e as any); } }}
+                                    onKeyDown={(e) => {
+                                        if (e.key === 'Enter' && !e.shiftKey) {
+                                            e.preventDefault();
+                                            handleSendMessage(e as any);
+                                            handleTypingBroadcast(false);
+                                        }
+                                    }}
                                     placeholder="Message..."
                                     className="flex-1 bg-transparent py-5 px-2 text-sm font-bold outline-none resize-none max-h-40 min-h-[56px] placeholder:text-slate-300"
                                     rows={1}
