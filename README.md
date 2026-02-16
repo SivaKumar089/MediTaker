@@ -1,73 +1,114 @@
-# React + TypeScript + Vite
+# 🏥 MediTaker
 
-This template provides a minimal setup to get React working in Vite with HMR and some ESLint rules.
+**MediTaker** is a modern healthcare management platform designed to bridge the gap between patients and caretakers. It facilitates seamless medication tracking, daily health check-ins, and real-time communication to ensure better healthcare outcomes.
 
-Currently, two official plugins are available:
+---
 
-- [@vitejs/plugin-react](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react) uses [Babel](https://babeljs.io/) (or [oxc](https://oxc.rs) when used in [rolldown-vite](https://vite.dev/guide/rolldown)) for Fast Refresh
-- [@vitejs/plugin-react-swc](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react-swc) uses [SWC](https://swc.rs/) for Fast Refresh
+## 🚀 Features
 
-## React Compiler
+### 👤 For Patients
+- **Medication Management**: Track daily medications, dosages, and schedules.
+- **Daily Check-ins**: Submit check-ins with photo proof of medication intake.
+- **Caretaker Connection**: Connect with trusted caretakers for remote monitoring.
+- **Health Dashboard**: Visualize health trends and medication adherence.
 
-The React Compiler is not enabled on this template because of its impact on dev & build performances. To add it, see [this documentation](https://react.dev/learn/react-compiler/installation).
+### 👩‍⚕️ For Caretakers
+- **Patient Monitoring**: View real-time updates on patient adherence and health status.
+- **Appointment Scheduling**: Integrated calendar for managing patient visits.
+- **Analytics**: Comprehensive charts showing patient progress over time.
+- **Patient Discovery**: Search and connect with patients needing care.
 
-## Expanding the ESLint configuration
+### 💬 Common Features
+- **Real-time Messaging**: Instant communication between patients and caretakers.
+- **Notifications**: Instant alerts for medication times and message updates.
+- **Responsive Design**: Fully optimized for Desktop, Tablet, and Mobile.
 
-If you are developing a production application, we recommend updating the configuration to enable type-aware lint rules:
+---
 
-```js
-export default defineConfig([
-  globalIgnores(['dist']),
-  {
-    files: ['**/*.{ts,tsx}'],
-    extends: [
-      // Other configs...
+## 🛠️ Tech Stack
 
-      // Remove tseslint.configs.recommended and replace with this
-      tseslint.configs.recommendedTypeChecked,
-      // Alternatively, use this for stricter rules
-      tseslint.configs.strictTypeChecked,
-      // Optionally, add this for stylistic rules
-      tseslint.configs.stylisticTypeChecked,
+- **Frontend**: [React 19](https://react.dev/), [TypeScript](https://www.typescriptlang.org/), [Vite](https://vitejs.dev/)
+- **Styling**: [Tailwind CSS 4](https://tailwindcss.com/)
+- **Backend & Database**: [Supabase](https://supabase.com/) (Auth, PostgreSQL, Realtime, Storage)
+- **Charts**: [Recharts](https://recharts.org/)
+- **Calendar**: [FullCalendar](https://fullcalendar.io/)
+- **Animations**: [AOS (Animate On Scroll)](https://michalsnik.github.io/aos/)
+- **Icons**: [React Icons](https://react-icons.github.io/react-icons/)
 
-      // Other configs...
-    ],
-    languageOptions: {
-      parserOptions: {
-        project: ['./tsconfig.node.json', './tsconfig.app.json'],
-        tsconfigRootDir: import.meta.dirname,
-      },
-      // other options...
-    },
-  },
-])
+---
+
+## 📋 Step-by-Step Setup Guide
+
+Follow these steps to get the project running locally:
+
+### 1. Prerequisites
+Ensure you have the following installed:
+- [Node.js](https://nodejs.org/) (Version 18 or higher)
+- [npm](https://www.npmjs.com/) or [yarn](https://yarnpkg.com/)
+
+### 2. Clone the Repository
+```bash
+git clone https://github.com/Sivakumar089/Meditaker.git
+cd Meditaker/MediTaker
 ```
 
-You can also install [eslint-plugin-react-x](https://github.com/Rel1cx/eslint-react/tree/main/packages/plugins/eslint-plugin-react-x) and [eslint-plugin-react-dom](https://github.com/Rel1cx/eslint-react/tree/main/packages/plugins/eslint-plugin-react-dom) for React-specific lint rules:
-
-```js
-// eslint.config.js
-import reactX from 'eslint-plugin-react-x'
-import reactDom from 'eslint-plugin-react-dom'
-
-export default defineConfig([
-  globalIgnores(['dist']),
-  {
-    files: ['**/*.{ts,tsx}'],
-    extends: [
-      // Other configs...
-      // Enable lint rules for React
-      reactX.configs['recommended-typescript'],
-      // Enable lint rules for React DOM
-      reactDom.configs.recommended,
-    ],
-    languageOptions: {
-      parserOptions: {
-        project: ['./tsconfig.node.json', './tsconfig.app.json'],
-        tsconfigRootDir: import.meta.dirname,
-      },
-      // other options...
-    },
-  },
-])
+### 3. Install Dependencies
+```bash
+npm install
 ```
+
+### 4. Environment Configuration
+Create a `.env` file in the root directory and add your Supabase credentials:
+```env
+VITE_SUPABASE_URL=your_supabase_project_url
+VITE_SUPABASE_ANON_KEY=your_supabase_anon_key
+```
+
+### 5. Running Locally
+Start the development server:
+```bash
+npm run dev
+```
+The app should now be running at `http://localhost:5173`.
+
+### 6. Building for Production
+To create an optimized production build:
+```bash
+npm run build
+```
+
+---
+
+## 📜 Project Rules & Guidelines (REUI)
+
+To maintain code quality and consistency, please follow these "rules":
+
+1. **Strict Typing**: Always use TypeScript types/interfaces. Avoid using `any`.
+2. **Component Structure**: Keep components small and reusable. Place them in `src/components`.
+3. **Service Layer**: All database interactions must go through the service files in `src/services`.
+4. **State Management**: Use React Hooks and Context API for global state.
+5. **Styling**: Use Tailwind CSS classes. Avoid inline styles unless necessary for dynamic values.
+6. **PR Protocol**: 
+    - Ensure the code passes `npm run lint`.
+    - Provide a clear description of changes in pull requests.
+    - Test mobile responsiveness before submitting.
+
+---
+
+## 📄 License
+This project is licensed under the MIT License - see the [LICENSE](LICENSE) file for details.
+
+---
+
+## 🤝 Contributing
+Contributions are welcome! Please feel free to submit a Pull Request.
+
+1. Fork the Project
+2. Create your Feature Branch (`git checkout -b feature/AmazingFeature`)
+3. Commit your Changes (`git commit -m 'Add some AmazingFeature'`)
+4. Push to the Branch (`git push origin feature/AmazingFeature`)
+5. Open a Pull Request
+
+---
+
+*Made with ❤️ for better healthcare.*

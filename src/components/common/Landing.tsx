@@ -20,7 +20,7 @@ export default function Home() {
         </p>
 
         {/* Horizontal Cards */}
-        <div className="flex gap-12 justify-center items-stretch flex-nowrap overflow-x-auto pb-6">
+        <div className="flex flex-col md:flex-row gap-8 justify-center items-stretch">
 
           {/* Caretaker Card */}
           <div className="group min-w-[320px] bg-white/60 backdrop-blur-xl p-10 rounded-3xl shadow-2xl border border-white/40 hover:-translate-y-3 hover:shadow-blue-200/50 transition duration-500">
