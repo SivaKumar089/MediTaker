@@ -79,12 +79,23 @@ export default function PatientDetails() {
 
         if (!assignForm.medicine_id) return toast.error("Select a medicine");
 
+        const selectedMedicine = inventory.find(m => m.id === assignForm.medicine_id);
+        if (!selectedMedicine) return toast.error("Medicine not found in inventory");
+
+        const totalQuantityRequired = assignForm.frequency * assignForm.duration_days;
+
+        if (selectedMedicine.current_stock < totalQuantityRequired) {
+            toast.error(`Insufficient stock! You need ${totalQuantityRequired} units, but only ${selectedMedicine.current_stock} available.`);
+            return;
+        }
+
         try {
             const startDate = new Date();
             const endDate = new Date();
             endDate.setDate(startDate.getDate() + parseInt(assignForm.duration_days.toString()));
 
-            const { error } = await supabase
+            // 1. Insert assignment
+            const { error: assignError } = await supabase
                 .from('assigned_medicines')
                 .insert([{
                     ...assignForm,
@@ -96,9 +107,17 @@ export default function PatientDetails() {
                     status: 'active'
                 }]);
 
-            if (error) throw error;
+            if (assignError) throw assignError;
 
-            toast.success("Medicine assigned successfully!");
+            // 2. Reduce stock from inventory
+            const { error: stockError } = await supabase
+                .from('medicines')
+                .update({ current_stock: selectedMedicine.current_stock - totalQuantityRequired })
+                .eq('id', assignForm.medicine_id);
+
+            if (stockError) throw stockError;
+
+            toast.success("Medicine assigned and stock updated successfully!");
             setShowAssignModal(false);
             loadData();
         } catch (error: any) {

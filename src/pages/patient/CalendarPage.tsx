@@ -95,6 +95,17 @@ export default function CalendarPage() {
 
     const handleEventClick = (info: any) => {
         const props = info.event.extendedProps;
+        const today = new Date().toISOString().split('T')[0];
+
+        if (props.date !== today) {
+            if (props.date < today) {
+                toast.info("Past records are read-only.");
+            } else {
+                toast.info("Future schedules cannot be checked in yet.");
+            }
+            return;
+        }
+
         if (props.status === 'Pending' || props.status === 'Missed') {
             setSelectedEvent(props);
             setShowModal(true);
